@@ -1,0 +1,45 @@
+name: Check Live AI Station
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'site-status.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check published website and save result
+        shell: bash
+        run: |
+          set -u
+          URL="https://mdis89-ctrl.github.io/my-AI-station/"
+          ok=false
+          status="unreachable"
+          for n in $(seq 1 32); do
+            status=$(curl -L -sS --max-time 20 -o /tmp/ai-station-page.html -w '%{http_code}' "$URL" 2>/tmp/curl-errors.txt || echo "000")
+            if [ "$status" = "200" ] && grep -q '<title>My AI Station' /tmp/ai-station-page.html && grep -q 'id="chatbox"' /tmp/ai-station-page.html; then
+              ok=true
+              break
+            fi
+            sleep 10
+          done
+          if [ "$ok" = true ]; then
+            printf '{"status":"working","http_status":"%s","url":"%s","verified_at":"%s"}\n' "$status" "$URL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > site-status.json
+          else
+            printf '{"status":"not_verified","http_status":"%s","url":"%s","verified_at":"%s"}\n' "$status" "$URL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > site-status.json
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site-status.json
+          git commit -m "Record live AI Station availability" || true
+          git push || true
+          if [ "$ok" = false ]; then
+            echo "Published page did not pass the live HTTP and HTML checks."
+            exit 1
+          fi
+          echo "Live page verified."
