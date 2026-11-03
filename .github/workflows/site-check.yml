@@ -22,7 +22,7 @@ jobs:
           status="unreachable"
           for n in $(seq 1 32); do
             status=$(curl -L -sS --max-time 20 -o /tmp/ai-station-page.html -w '%{http_code}' "$URL" 2>/tmp/curl-errors.txt || echo "000")
-            if [ "$status" = "200" ] && grep -q '<title>My AI Station' /tmp/ai-station-page.html && grep -q 'id="chatbox"' /tmp/ai-station-page.html; then
+            if [ "$status" = "200" ] && grep -q '<title>My AI Station' /tmp/ai-station-page.html && grep -q 'id="chatLog"' /tmp/ai-station-page.html; then
               ok=true
               break
             fi
